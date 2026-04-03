@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DevOps — From Zero to Pipeline</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080c10;
+      --surface: #0d1117;
+      --surface2: #161b22;
+      --border: #21262d;
+      --green: #39ff14;
+      --green-dim: #1a7a00;
+      --cyan: #00e5ff;
+      --amber: #ffb300;
+      --red: #ff4444;
+      --blue: #4d8bff;
+      --text: #c9d1d9;
+      --muted: #586069;
+      --font-mono: 'JetBrains Mono', monospace;
+      --font-display: 'Syne', sans-serif;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      line-height: 1.7;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      width: 12px; height: 12px;
+      background: var(--green);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 16px var(--green), 0 0 32px var(--green-dim);
+      transition: transform 0.05s, width 0.2s, height 0.2s;
+    }
+    .cursor-ring {
+      width: 32px; height: 32px;
+      border: 1px solid rgba(57,255,20,0.4);
+      border-radius: 50%;
+      position: fixed;
+      pointer-events: none;
+      z-index: 9998;
+      transform: translate(-50%, -50%);
+      transition: all 0.12s ease;
+    }
+
+    /* Scanlines overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 3px; }
+
+    /* NAV */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 1000;
+      padding: 1rem 2rem;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(8,12,16,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.2rem;
+      color: var(--green);
+      text-shadow: 0 0 20px var(--green);
+      letter-spacing: -0.5px;
+    }
+    .nav-logo span { color: var(--text); }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+    .nav-badge {
+      font-size: 0.65rem;
+      background: var(--green-dim);
+      color: var(--green);
+      padding: 0.2rem 0.6rem;
+      border-radius: 2px;
+      border: 1px solid var(--green-dim);
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center;
+      padding: 8rem 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(57,255,20,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(57,255,20,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridPan 20s linear infinite;
+    }
+    @keyframes gridPan {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(60px); }
+    }
+    .hero-glow {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(57,255,20,0.08) 0%, transparent 70%);
+      top: 50%; left: 50%;
+      transform: translate(-50%, -60%);
+      animation: breathe 4s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%,100% { transform: translate(-50%, -60%) scale(1); opacity: 0.6; }
+      50% { transform: translate(-50%, -60%) scale(1.1); opacity: 1; }
+    }
+    .terminal-tag {
+      font-size: 0.7rem;
+      color: var(--green);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.2s forwards;
+    }
+    .terminal-tag::before { content: '> '; color: var(--muted); }
+    .hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(3rem, 8vw, 7rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -3px;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.4s forwards;
+    }
+    .hero h1 .line1 { color: #fff; display: block; }
+    .hero h1 .line2 {
+      color: var(--green);
+      text-shadow: 0 0 40px rgba(57,255,20,0.5);
+      display: block;
+    }
+    .hero-sub {
+      max-width: 560px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 3rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.6s forwards;
+    }
+    .hero-cta {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+      opacity: 0;
+      animation: fadeUp 0.8s 0.8s forwards;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: var(--green);
+      color: var(--bg);
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.85rem 2rem;
+      border: none;
+      text-decoration: none;
+      cursor: none;
+      letter-spacing: 0.5px;
+      transition: box-shadow 0.3s, transform 0.2s;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 30px var(--green), 0 0 60px rgba(57,255,20,0.3);
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      background: transparent;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.85rem 2rem;
+      border: 1px solid var(--border);
+      text-decoration: none;
+      cursor: none;
+      transition: border-color 0.3s, color 0.3s;
+    }
+    .btn-secondary:hover { border-color: var(--green); color: var(--green); }
+
+    .hero-stats {
+      display: flex; gap: 3rem; flex-wrap: wrap; justify-content: center;
+      margin-top: 5rem;
+      opacity: 0;
+      animation: fadeUp 0.8s 1s forwards;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: var(--green);
+      line-height: 1;
+    }
+    .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 0.3rem; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SECTION WRAPPER */
+    section { padding: 5rem 2rem; max-width: 1200px; margin: 0 auto; }
+    .section-label {
+      font-size: 0.65rem;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 0.75rem;
+    }
+    .section-label::before { content: '// '; color: var(--muted); }
+    h2 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 4vw, 3.5rem);
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1.5px;
+      margin-bottom: 1rem;
+    }
+    .section-desc { color: var(--muted); font-size: 0.85rem; max-width: 520px; margin-bottom: 3.5rem; }
+
+    /* WHAT IS DEVOPS */
+    .what-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+    @media (max-width: 768px) { .what-grid { grid-template-columns: 1fr; } }
+    .what-card {
+      background: var(--surface);
+      padding: 2rem;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: background 0.3s;
+    }
+    .what-card:hover { background: var(--surface2); }
+    .what-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0;
+      width: 3px; height: 0;
+      background: var(--green);
+      transition: height 0.4s ease;
+    }
+    .what-card:hover::before { height: 100%; }
+    .what-num {
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: var(--border);
+      line-height: 1;
+      margin-bottom: 1rem;
+      font-family: var(--font-display);
+    }
+    .what-card h3 { font-family: var(--font-display); font-size: 1.3rem; color: #fff; margin-bottom: 0.75rem; }
+    .what-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.8; }
+
+    /* PIPELINE */
+    .pipeline-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 3rem 2rem;
+      margin-bottom: 3rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .pipeline-title {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 2.5rem;
+      text-align: center;
+    }
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 1rem;
+    }
+    .pipe-stage {
+      display: flex; flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 100px;
+      position: relative;
+    }
+    .pipe-icon {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      border: 2px solid var(--border);
+      background: var(--bg);
+      position: relative;
+      z-index: 2;
+      transition: all 0.3s;
+      cursor: none;
+    }
+    .pipe-stage:hover .pipe-icon {
+      border-color: var(--green);
+      box-shadow: 0 0 20px rgba(57,255,20,0.3);
+      transform: scale(1.15);
+    }
+    .pipe-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; text-align: center; }
+    .pipe-arrow {
+      flex: 0.3;
+      height: 2px;
+      background: linear-gradient(90deg, var(--green-dim), var(--green));
+      position: relative;
+      min-width: 20px;
+    }
+    .pipe-arrow::after {
+      content: '';
+      position: absolute; right: -6px; top: -4px;
+      width: 0; height: 0;
+      border-left: 8px solid var(--green);
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+    }
+    .pipe-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      position: absolute;
+      top: 50%; transform: translateY(-50%);
+      left: -4px;
+      box-shadow: 0 0 8px var(--green);
+      animation: moveDot 3s linear infinite;
+    }
+    @keyframes moveDot {
+      0% { left: 0%; opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
+
+    /* TOOLS GRID */
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 1px;
+    }
+    .tool-card {
+      background: var(--surface);
+      padding: 1.75rem;
+      border: 1px solid var(--border);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .tool-card:hover { background: var(--surface2); transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.4); }
+    .tool-icon {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+    .tool-name {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: #fff;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+    }
+    .tool-cat {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      display: inline-block;
+      border-radius: 2px;
+    }
+    .cat-ci { background: rgba(77,139,255,0.15); color: var(--blue); border: 1px solid rgba(77,139,255,0.3); }
+    .cat-container { background: rgba(0,229,255,0.1); color: var(--cyan); border: 1px solid rgba(0,229,255,0.25); }
+    .cat-cloud { background: rgba(255,179,0,0.1); color: var(--amber); border: 1px solid rgba(255,179,0,0.25); }
+    .cat-monitor { background: rgba(57,255,20,0.1); color: var(--green); border: 1px solid rgba(57,255,20,0.25); }
+    .cat-iac { background: rgba(255,68,68,0.1); color: var(--red); border: 1px solid rgba(255,68,68,0.25); }
+    .tool-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.7; }
+
+    /* CONCEPTS */
+    .concepts { background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 5rem 2rem; }
+    .concepts-inner { max-width: 1200px; margin: 0 auto; }
+    .concepts-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 900px) { .concepts-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .concepts-grid { grid-template-columns: 1fr; } }
+    .concept-card {
+      border: 1px solid var(--border);
+      padding: 1.5rem;
+      background: var(--bg);
+      transition: border-color 0.3s;
+    }
+    .concept-card:hover { border-color: var(--green); }
+    .concept-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+    .concept-card h4 { font-family: var(--font-display); color: #fff; font-size: 1rem; margin-bottom: 0.5rem; }
+    .concept-card p { font-size: 0.75rem; color: var(--muted); line-height: 1.8; }
+
+    /* ROADMAP */
+    .roadmap-list { position: relative; padding-left: 2rem; }
+    .roadmap-list::before {
+      content: '';
+      position: absolute; left: 7px; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--green), transparent);
+    }
+    .roadmap-item {
+      position: relative;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      transform: translateX(-20px);
+      transition: all 0.5s ease;
+    }
+    .roadmap-item.visible { opacity: 1; transform: translateX(0); }
+    .roadmap-item::before {
+      content: '';
+      position: absolute; left: -1.85rem; top: 6px;
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+    }
+    .roadmap-step { font-size: 0.6rem; color: var(--green); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.25rem; }
+    .roadmap-item h4 { font-family: var(--font-display); font-size: 1.1rem; color: #fff; margin-bottom: 0.4rem; }
+    .roadmap-item p { font-size: 0.8rem; color: var(--muted); }
+    .roadmap-tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
+    .tag {
+      font-size: 0.6rem;
+      padding: 0.2rem 0.6rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 2px;
+    }
+
+    /* TERMINAL DEMO */
+    .terminal {
+      background: #0a0e14;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      font-size: 0.8rem;
+    }
+    .terminal-bar {
+      background: var(--surface2);
+      padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #ffbd2e; }
+    .dot-green { background: #28c840; }
+    .terminal-title { font-size: 0.65rem; color: var(--muted); margin-left: auto; margin-right: auto; }
+    .terminal-body { padding: 1.5rem; line-height: 2; }
+    .t-prompt { color: var(--green); }
+    .t-cmd { color: var(--cyan); }
+    .t-comment { color: var(--muted); }
+    .t-success { color: var(--green); }
+    .t-warn { color: var(--amber); }
+    .t-error { color: var(--red); }
+    .t-line { display: block; animation: typeIn 0.05s ease forwards; opacity: 0; }
+
+    /* Quiz section */
+    .quiz-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2.5rem;
+      margin-top: 3rem;
+    }
+    .quiz-q {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      color: #fff;
+      margin-bottom: 1.5rem;
+    }
+    .quiz-options { display: flex; flex-direction: column; gap: 0.75rem; }
+    .quiz-opt {
+      padding: 0.9rem 1.25rem;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      cursor: none;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .quiz-opt:hover { border-color: var(--green); color: var(--green); }
+    .quiz-opt.correct { border-color: var(--green); background: rgba(57,255,20,0.1); color: var(--green); }
+    .quiz-opt.wrong { border-color: var(--red); background: rgba(255,68,68,0.1); color: var(--red); }
+    .quiz-feedback {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      min-height: 1.5rem;
+      transition: all 0.3s;
+    }
+    .quiz-next {
+      margin-top: 1.25rem;
+      display: none;
+      background: transparent;
+      border: 1px solid var(--green);
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.6rem 1.5rem;
+      cursor: none;
+      transition: all 0.3s;
+    }
+    .quiz-next:hover { background: var(--green); color: var(--bg); }
+    .quiz-progress { font-size: 0.7rem; color: var(--muted); margin-bottom: 1.5rem; }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 3rem 2rem;
+      text-align: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .footer-logo {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--green);
+      margin-bottom: 1rem;
+      text-shadow: 0 0 20px var(--green);
+    }
+    .footer-text { font-size: 0.7rem; color: var(--muted); margin-bottom: 0.5rem; }
+
+    /* SCROLL REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* Glitch effect on hover for h1 */
+    .glitch { position: relative; display: inline-block; }
+    .glitch:hover::before, .glitch:hover::after {
+      content: attr(data-text);
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+    }
+    .glitch:hover::before {
+      color: var(--cyan);
+      clip: rect(0, 900px, 0, 0);
+      animation: glitch1 0.3s infinite linear;
+    }
+    .glitch:hover::after {
+      color: var(--red);
+      clip: rect(0, 900px, 0, 0);
+      animation: glitch2 0.3s infinite linear reverse;
+    }
+    @keyframes glitch1 {
+      0%,100% { clip: rect(0,9999px,100px,0); transform: skew(-0.3deg); }
+      25% { clip: rect(50px,9999px,9999px,0); transform: skew(0.1deg); }
+      50% { clip: rect(0,9999px,40px,0); transform: skew(-0.2deg); }
+    }
+    @keyframes glitch2 {
+      0%,100% { clip: rect(80px,9999px,9999px,0); transform: skew(0.2deg); }
+      25% { clip: rect(0,9999px,60px,0); transform: skew(-0.1deg); }
+    }
+
+    /* Mobile nav */
+    @media (max-width: 600px) {
+      .nav-links { display: none; }
+      .hero h1 { letter-spacing: -1px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Dev<span>Ops</span>.io</div>
+  <ul class="nav-links">
+    <li><a href="#what">What</a></li>
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#tools">Tools</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+  </ul>
+  <span class="nav-badge">Beginner Friendly</span>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-glow"></div>
+  <p class="terminal-tag">init devops journey</p>
+  <h1>
+    <span class="line1 glitch" data-text="Master the">Master the</span>
+    <span class="line2 glitch" data-text="DevOps Loop">DevOps Loop</span>
+  </h1>
+  <p class="hero-sub">From writing code to shipping production. Learn the culture, tools, and practices that bridge development and operations.</p>
+  <div class="hero-cta">
+    <a href="#what" class="btn-primary">▶ Start Learning</a>
+    <a href="#pipeline" class="btn-secondary">↓ See the Pipeline</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><div class="stat-num" id="counter1">0</div><div class="stat-label">Core Concepts</div></div>
+    <div class="stat"><div class="stat-num" id="counter2">0</div><div class="stat-label">Essential Tools</div></div>
+    <div class="stat"><div class="stat-num" id="counter3">0</div><div class="stat-label">Pipeline Stages</div></div>
+  </div>
+</div>
+
+<!-- WHAT IS DEVOPS -->
+<section id="what">
+  <div class="reveal">
+    <p class="section-label">Introduction</p>
+    <h2>What is DevOps?</h2>
+    <p class="section-desc">DevOps is a cultural and technical movement that unifies software development (Dev) and IT operations (Ops) to deliver software faster and more reliably.</p>
+  </div>
+  <div class="what-grid reveal">
+    <div class="what-card">
+      <div class="what-num">01</div>
+      <h3>Culture First</h3>
+      <p>DevOps is not just tools — it's a mindset. Teams collaborate across silos, share responsibility, and build a culture of trust, feedback, and continuous improvement.</p>
+    </div>
+    <div class="what-card">
+      <div class="what-num">02</div>
+      <h3>Automation Everything</h3>
+      <p>Manual steps are enemies of speed and reliability. DevOps automates building, testing, deploying, and monitoring so humans can focus on creative problem solving.</p>
+    </div>
+    <div class="what-card">
+      <div class="what-num">03</div>
+      <h3>Continuous Delivery</h3>
+      <p>Ship small, ship often. Instead of big-bang quarterly releases, DevOps teams deploy dozens or hundreds of times per day with low risk and fast rollback capabilities.</p>
+    </div>
+    <div class="what-card">
+      <div class="what-num">04</div>
+      <h3>Measure & Improve</h3>
+      <p>You can't improve what you don't measure. DevOps teams track deployment frequency, lead time, failure rates, and recovery time to continuously optimize their systems.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PIPELINE -->
+<section id="pipeline" style="max-width:100%; padding: 5rem 2rem; background: var(--bg);">
+  <div style="max-width:1200px; margin:0 auto;">
+    <div class="reveal">
+      <p class="section-label">CI/CD Pipeline</p>
+      <h2>The DevOps Flow</h2>
+      <p class="section-desc">Every change a developer makes travels through an automated pipeline before it reaches users. Here's how the loop works.</p>
+    </div>
+    <div class="pipeline-wrap reveal">
+      <p class="pipeline-title">$ running ci/cd pipeline...</p>
+      <div class="pipeline">
+        <div class="pipe-stage">
+          <div class="pipe-icon">💻</div>
+          <div class="pipe-label">Code</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">🔧</div>
+          <div class="pipe-label">Build</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:0.5s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">🧪</div>
+          <div class="pipe-label">Test</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:1s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">🔐</div>
+          <div class="pipe-label">Secure</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:1.5s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">📦</div>
+          <div class="pipe-label">Package</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:2s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">🚀</div>
+          <div class="pipe-label">Deploy</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:2.5s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">📊</div>
+          <div class="pipe-label">Monitor</div>
+        </div>
+        <div class="pipe-arrow"><div class="pipe-dot" style="animation-delay:3s"></div></div>
+        <div class="pipe-stage">
+          <div class="pipe-icon">🔁</div>
+          <div class="pipe-label">Feedback</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Terminal -->
+    <div class="terminal reveal">
+      <div class="terminal-bar">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+        <span class="terminal-title">pipeline.yml — CI Runner</span>
+      </div>
+      <div class="terminal-body" id="termBody">
+        <span class="t-line" style="animation-delay:0.1s"><span class="t-prompt">$ </span><span class="t-cmd">git push origin main</span></span>
+        <span class="t-line" style="animation-delay:0.3s"><span class="t-comment"># Webhook triggered → CI Pipeline starting...</span></span>
+        <span class="t-line" style="animation-delay:0.6s"><span class="t-success">✔ </span>Cloning repository... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:0.9s"><span class="t-success">✔ </span>Installing dependencies (npm ci)... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:1.2s"><span class="t-success">✔ </span>Running unit tests (142/142 passing)... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:1.5s"><span class="t-success">✔ </span>Security scan — 0 vulnerabilities found... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:1.8s"><span class="t-success">✔ </span>Docker build &amp; push to registry... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:2.1s"><span class="t-warn">⚡ </span>Deploying to staging environment...</span>
+        <span class="t-line" style="animation-delay:2.4s"><span class="t-success">✔ </span>Health checks passed (200 OK)... <span class="t-success">done</span></span>
+        <span class="t-line" style="animation-delay:2.7s"><span class="t-warn">⚡ </span>Rolling deploy to production (canary 10%)...</span>
+        <span class="t-line" style="animation-delay:3.0s"><span class="t-success">✔ </span>No errors in first 5 minutes → promoting 100%</span>
+        <span class="t-line" style="animation-delay:3.3s"><span class="t-success">✅ Pipeline complete! </span><span class="t-comment">Deployed in 4m 12s</span></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CORE CONCEPTS -->
+<div class="concepts" id="concepts">
+  <div class="concepts-inner">
+    <div class="reveal">
+      <p class="section-label">Core Concepts</p>
+      <h2>Key Ideas to Grasp</h2>
+      <p class="section-desc">Before diving into tools, understand the principles that make DevOps work.</p>
+    </div>
+    <div class="concepts-grid reveal">
+      <div class="concept-card">
+        <div class="concept-icon">🔄</div>
+        <h4>CI/CD</h4>
+        <p>Continuous Integration merges code frequently and runs automated tests. Continuous Delivery/Deployment automatically ships passing code to production.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🐳</div>
+        <h4>Containers</h4>
+        <p>Containers (like Docker) package an application with all its dependencies so it runs identically in dev, staging, and production. "Works on my machine" — solved.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">☸️</div>
+        <h4>Orchestration</h4>
+        <p>Kubernetes manages containers at scale — scheduling, healing, scaling, and networking hundreds of microservices across clusters of machines automatically.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📜</div>
+        <h4>Infrastructure as Code</h4>
+        <p>Manage servers, databases, and networks using code files (Terraform, Ansible) that can be versioned, reviewed, and automated just like application code.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">👁️</div>
+        <h4>Observability</h4>
+        <p>Know what your system is doing through Logs, Metrics, and Traces (the three pillars). Tools like Prometheus and Grafana visualize system health in real time.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🛡️</div>
+        <h4>DevSecOps</h4>
+        <p>Security is not bolted on at the end — it's built into every pipeline stage. Scan code, containers, and infrastructure for vulnerabilities before they reach production.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🌿</div>
+        <h4>GitOps</h4>
+        <p>Git is the single source of truth for both application and infrastructure state. Changes to production happen only through pull requests — full audit trail, automatic rollback.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🔵</div>
+        <h4>Blue/Green Deploys</h4>
+        <p>Run two identical environments. Deploy to the idle one, test it, then switch traffic over. If anything breaks, flip back instantly — zero downtime releases.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📉</div>
+        <h4>DORA Metrics</h4>
+        <p>Four key metrics measure DevOps performance: Deployment Frequency, Lead Time for Changes, Change Failure Rate, and Mean Time to Recovery (MTTR).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOOLS -->
+<section id="tools">
+  <div class="reveal">
+    <p class="section-label">Ecosystem</p>
+    <h2>Essential DevOps Tools</h2>
+    <p class="section-desc">The DevOps toolchain spans source control, CI/CD, containers, cloud, monitoring, and more. Here are the tools you'll encounter most.</p>
+  </div>
+  <div class="tools-grid reveal">
+    <div class="tool-card">
+      <span class="tool-icon">🐙</span>
+      <div class="tool-name">GitHub / GitLab</div>
+      <span class="tool-cat cat-ci">Source Control</span>
+      <p class="tool-desc">Host code, review pull requests, and trigger automated pipelines on every commit. The heartbeat of any DevOps workflow.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">⚡</span>
+      <div class="tool-name">GitHub Actions</div>
+      <span class="tool-cat cat-ci">CI/CD</span>
+      <p class="tool-desc">Define CI/CD pipelines in YAML files right inside your repository. Build, test, and deploy automatically on push events.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🐳</span>
+      <div class="tool-name">Docker</div>
+      <span class="tool-cat cat-container">Container</span>
+      <p class="tool-desc">Package applications and their dependencies into portable container images that run consistently everywhere.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">☸️</span>
+      <div class="tool-name">Kubernetes</div>
+      <span class="tool-cat cat-container">Orchestration</span>
+      <p class="tool-desc">Automate deployment, scaling, and management of containerized applications across clusters of machines.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🟠</span>
+      <div class="tool-name">Terraform</div>
+      <span class="tool-cat cat-iac">IaC</span>
+      <p class="tool-desc">Write declarative code to provision and manage cloud infrastructure across AWS, Azure, GCP, and 1000+ providers.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">☁️</span>
+      <div class="tool-name">AWS / Azure / GCP</div>
+      <span class="tool-cat cat-cloud">Cloud</span>
+      <p class="tool-desc">The big three cloud providers offering compute, storage, databases, networking, and managed DevOps services at scale.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🔥</span>
+      <div class="tool-name">Prometheus</div>
+      <span class="tool-cat cat-monitor">Monitoring</span>
+      <p class="tool-desc">Time-series metrics collection and alerting. Scrapes metrics from your applications and infrastructure every few seconds.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">📊</span>
+      <div class="tool-name">Grafana</div>
+      <span class="tool-cat cat-monitor">Visualization</span>
+      <p class="tool-desc">Beautiful, real-time dashboards for your metrics, logs, and traces. Connects to Prometheus, Elasticsearch, and 40+ data sources.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🔴</span>
+      <div class="tool-name">Ansible</div>
+      <span class="tool-cat cat-iac">Configuration</span>
+      <p class="tool-desc">Agentless automation for server configuration, application deployment, and orchestration using human-readable YAML playbooks.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🔍</span>
+      <div class="tool-name">ELK Stack</div>
+      <span class="tool-cat cat-monitor">Logging</span>
+      <p class="tool-desc">Elasticsearch + Logstash + Kibana: collect, store, and search through millions of log lines from every service in your system.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🚀</span>
+      <div class="tool-name">ArgoCD</div>
+      <span class="tool-cat cat-ci">GitOps</span>
+      <p class="tool-desc">Kubernetes-native GitOps delivery. Continuously syncs your cluster state to match what's declared in your Git repository.</p>
+    </div>
+    <div class="tool-card">
+      <span class="tool-icon">🔒</span>
+      <div class="tool-name">HashiCorp Vault</div>
+      <span class="tool-cat cat-iac">Secrets</span>
+      <p class="tool-desc">Centrally store and tightly control access to secrets, API keys, passwords, and certificates across your infrastructure.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap" style="background: var(--bg);">
+  <div class="reveal">
+    <p class="section-label">Learning Path</p>
+    <h2>Your DevOps Roadmap</h2>
+    <p class="section-desc">Follow this structured path from beginner to competent DevOps practitioner. Take it step by step — every expert started here.</p>
+  </div>
+  <div class="roadmap-list" id="roadmap-list">
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 01</div>
+      <h4>Linux & Scripting Fundamentals</h4>
+      <p>DevOps lives in the terminal. Learn Linux commands, file systems, permissions, and write bash scripts to automate repetitive tasks.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Linux</span><span class="tag">Bash</span><span class="tag">Python</span><span class="tag">SSH</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 02</div>
+      <h4>Version Control with Git</h4>
+      <p>Master branching, merging, rebasing, and pull request workflows. Git is the foundation of every pipeline and collaborative workflow.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Git</span><span class="tag">GitHub</span><span class="tag">Branching</span><span class="tag">PR Workflow</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 03</div>
+      <h4>Containers with Docker</h4>
+      <p>Understand container concepts, write Dockerfiles, build images, push to registries, and orchestrate multi-container apps with Docker Compose.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Docker</span><span class="tag">Dockerfile</span><span class="tag">Docker Compose</span><span class="tag">Registry</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 04</div>
+      <h4>CI/CD Pipelines</h4>
+      <p>Build automated pipelines that test, build, and deploy code on every commit. Start with GitHub Actions, then explore Jenkins or GitLab CI.</p>
+      <div class="roadmap-tags">
+        <span class="tag">GitHub Actions</span><span class="tag">YAML</span><span class="tag">Jenkins</span><span class="tag">Artifacts</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 05</div>
+      <h4>Cloud Fundamentals (AWS/GCP/Azure)</h4>
+      <p>Learn compute (EC2/VM), storage (S3/Blob), networking (VPC), and managed services. Get your first cloud certification to validate your knowledge.</p>
+      <div class="roadmap-tags">
+        <span class="tag">AWS</span><span class="tag">EC2</span><span class="tag">S3</span><span class="tag">IAM</span><span class="tag">VPC</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 06</div>
+      <h4>Infrastructure as Code</h4>
+      <p>Stop clicking in cloud consoles. Define your entire infrastructure in Terraform files, version them in Git, and apply changes safely and repeatably.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Terraform</span><span class="tag">Ansible</span><span class="tag">HCL</span><span class="tag">State Management</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 07</div>
+      <h4>Kubernetes & Container Orchestration</h4>
+      <p>Learn Pods, Deployments, Services, Ingress, ConfigMaps, and Helm charts. Understand how Kubernetes keeps your applications highly available at scale.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Kubernetes</span><span class="tag">Helm</span><span class="tag">kubectl</span><span class="tag">Namespaces</span>
+      </div>
+    </div>
+    <div class="roadmap-item">
+      <div class="roadmap-step">Phase 08</div>
+      <h4>Monitoring, Logging & Observability</h4>
+      <p>You're responsible for what you deploy. Set up dashboards, alerts, and log aggregation so you know about problems before users do.</p>
+      <div class="roadmap-tags">
+        <span class="tag">Prometheus</span><span class="tag">Grafana</span><span class="tag">ELK</span><span class="tag">OpenTelemetry</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz" style="background: var(--surface); padding: 5rem 2rem; max-width: 100%;">
+  <div style="max-width: 700px; margin: 0 auto;">
+    <div class="reveal">
+      <p class="section-label">Test Yourself</p>
+      <h2>Quick Quiz</h2>
+      <p class="section-desc">Test your understanding of DevOps basics. Are you ready to start your journey?</p>
+    </div>
+    <div class="quiz-wrap reveal" id="quizWrap">
+      <div class="quiz-progress" id="quizProgress">Question 1 of 6</div>
+      <div class="quiz-q" id="quizQuestion"></div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <button class="quiz-next" id="quizNext" onclick="nextQuestion()">Next Question →</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">DevOps.io</div>
+  <p class="footer-text">Your journey from developer to DevOps engineer starts with a single git commit.</p>
+  <p class="footer-text" style="margin-top: 1rem; font-size: 0.6rem; color: var(--border);">Built for beginners. Powered by curiosity.</p>
+</footer>
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+  (function animCursor() {
+    rx += (mx - rx) * 0.15; ry += (my - ry) * 0.15;
+    cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+    ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+    requestAnimationFrame(animCursor);
+  })();
+  document.querySelectorAll('a,button,.quiz-opt').forEach(el => {
+    el.addEventListener('mouseenter', () => { cursor.style.transform = 'translate(-50%,-50%) scale(2)'; ring.style.opacity = '0.3'; });
+    el.addEventListener('mouseleave', () => { cursor.style.transform = 'translate(-50%,-50%) scale(1)'; ring.style.opacity = '1'; });
+  });
+
+  // Counters
+  function animCount(el, target, duration) {
+    let start = 0; const step = target / (duration / 16);
+    const t = setInterval(() => {
+      start = Math.min(start + step, target);
+      el.textContent = Math.floor(start);
+      if (start >= target) clearInterval(t);
+    }, 16);
+  }
+  setTimeout(() => {
+    animCount(document.getElementById('counter1'), 9, 1200);
+    animCount(document.getElementById('counter2'), 12, 1500);
+    animCount(document.getElementById('counter3'), 8, 1000);
+  }, 1200);
+
+  // Terminal lines
+  document.querySelectorAll('.t-line').forEach((el, i) => {
+    setTimeout(() => { el.style.opacity = '1'; }, 100 + i * 300);
+  });
+
+  // Scroll reveal
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.reveal, .roadmap-item').forEach(el => observer.observe(el));
+
+  // QUIZ
+  const quizData = [
+    {
+      q: "What does 'CI' stand for in CI/CD?",
+      opts: ["Continuous Integration", "Computer Interface", "Code Implementation", "Controlled Iteration"],
+      correct: 0,
+      explain: "CI = Continuous Integration. Developers merge code frequently and automated tests run on every commit to catch bugs early."
+    },
+    {
+      q: "Which tool is used to containerize applications so they run consistently anywhere?",
+      opts: ["Kubernetes", "Terraform", "Docker", "Ansible"],
+      correct: 2,
+      explain: "Docker packages an app and all its dependencies into a container image. Same image, identical behavior in dev, staging, and production."
+    },
+    {
+      q: "What is 'Infrastructure as Code' (IaC)?",
+      opts: [
+        "Writing code inside cloud consoles",
+        "Managing servers by clicking buttons in a GUI",
+        "Defining infrastructure resources in code files that can be versioned",
+        "Using code to write documentation for infra teams"
+      ],
+      correct: 2,
+      explain: "IaC means your servers, databases, and networks are defined in code files (e.g., Terraform). Version-controlled, reviewable, and reproducible."
+    },
+    {
+      q: "Kubernetes is primarily used for:",
+      opts: [
+        "Writing bash scripts",
+        "Orchestrating and managing containers at scale",
+        "Storing application secrets securely",
+        "Monitoring log files"
+      ],
+      correct: 1,
+      explain: "Kubernetes automates deployment, scaling, healing, and networking of containerized apps across clusters of machines."
+    },
+    {
+      q: "What are the three pillars of observability?",
+      opts: [
+        "Build, Test, Deploy",
+        "Code, Commit, Push",
+        "Logs, Metrics, Traces",
+        "Docker, Kubernetes, Helm"
+      ],
+      correct: 2,
+      explain: "The three pillars are Logs (what happened), Metrics (how the system is performing), and Traces (how a request traveled through services)."
+    },
+    {
+      q: "In a Blue/Green deployment, what happens when a problem is detected after switching traffic to Green?",
+      opts: [
+        "The pipeline re-runs from scratch",
+        "Traffic is switched back to Blue instantly",
+        "The application is taken offline for maintenance",
+        "Developers must manually fix and redeploy"
+      ],
+      correct: 1,
+      explain: "Blue/Green deploys keep the old environment (Blue) live. If Green has issues, you flip traffic back to Blue instantly — zero downtime rollback."
+    }
+  ];
+
+  let current = 0, score = 0, answered = false;
+  const qEl = document.getElementById('quizQuestion');
+  const optsEl = document.getElementById('quizOptions');
+  const feedEl = document.getElementById('quizFeedback');
+  const nextBtn = document.getElementById('quizNext');
+  const progressEl = document.getElementById('quizProgress');
+
+  function loadQuestion() {
+    answered = false;
+    const d = quizData[current];
+    progressEl.textContent = `Question ${current + 1} of ${quizData.length}  |  Score: ${score}`;
+    qEl.textContent = d.q;
+    optsEl.innerHTML = '';
+    feedEl.textContent = '';
+    feedEl.style.color = '';
+    nextBtn.style.display = 'none';
+    d.opts.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-opt';
+      btn.textContent = `${String.fromCharCode(65+i)}. ${opt}`;
+      btn.onclick = () => selectAnswer(i);
+      optsEl.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(idx) {
+    if (answered) return;
+    answered = true;
+    const d = quizData[current];
+    const btns = optsEl.querySelectorAll('.quiz-opt');
+    btns[idx].classList.add(idx === d.correct ? 'correct' : 'wrong');
+    btns[d.correct].classList.add('correct');
+    if (idx === d.correct) {
+      score++;
+      feedEl.style.color = 'var(--green)';
+      feedEl.textContent = '✔ Correct! ' + d.explain;
+    } else {
+      feedEl.style.color = 'var(--red)';
+      feedEl.textContent = '✖ Not quite. ' + d.explain;
+    }
+    nextBtn.style.display = current < quizData.length - 1 ? 'inline-block' : 'none';
+    if (current === quizData.length - 1) {
+      setTimeout(() => showResult(), 1500);
+    }
+  }
+
+  function nextQuestion() {
+    current++;
+    if (current < quizData.length) loadQuestion();
+  }
+
+  function showResult() {
+    const wrap = document.getElementById('quizWrap');
+    const pct = Math.round((score / quizData.length) * 100);
+    const msg = pct === 100 ? "🏆 Perfect score! You're ready." : pct >= 66 ? "🚀 Great work! Keep learning." : "📚 Keep going! Revisit the concepts above.";
+    wrap.innerHTML = `
+      <div style="text-align:center; padding: 2rem;">
+        <div style="font-size: 4rem; margin-bottom: 1rem">${pct === 100 ? '🏆' : pct >= 66 ? '🚀' : '📚'}</div>
+        <div style="font-family: var(--font-display); font-size: 2.5rem; color: var(--green); font-weight: 800;">${score} / ${quizData.length}</div>
+        <div style="font-size: 1rem; color: #fff; margin: 0.5rem 0 1rem; font-family: var(--font-display);">${msg}</div>
+        <div style="font-size: 0.75rem; color: var(--muted); margin-bottom: 2rem">Score: ${pct}%</div>
+        <button class="btn-primary" onclick="restartQuiz()" style="cursor:none;">↺ Try Again</button>
+      </div>`;
+  }
+
+  function restartQuiz() {
+    current = 0; score = 0;
+    document.getElementById('quizWrap').innerHTML = `
+      <div class="quiz-progress" id="quizProgress"></div>
+      <div class="quiz-q" id="quizQuestion"></div>
+      <div class="quiz-options" id="quizOptions"></div>
+      <div class="quiz-feedback" id="quizFeedback"></div>
+      <button class="quiz-next" id="quizNext" onclick="nextQuestion()">Next Question →</button>`;
+    // Re-query
+    Object.assign(window, {
+      qEl: document.getElementById('quizQuestion'),
+      optsEl: document.getElementById('quizOptions'),
+      feedEl: document.getElementById('quizFeedback'),
+      nextBtn: document.getElementById('quizNext'),
+      progressEl: document.getElementById('quizProgress')
+    });
+    loadQuestion();
+  }
+
+  // Init quiz with element references
+  Object.assign(window, { qEl, optsEl, feedEl, nextBtn, progressEl });
+  loadQuestion();
+</script>
+</body>
+</html>
