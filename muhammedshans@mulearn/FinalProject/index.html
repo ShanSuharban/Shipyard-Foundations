@@ -1004,8 +1004,58 @@
 <footer>
   <div class="footer-logo">DevOps.io</div>
   <p class="footer-text">Your journey from developer to DevOps engineer starts with a single git commit.</p>
-  <p class="footer-text" style="margin-top: 1rem; font-size: 0.6rem; color: var(--border);">Built for beginners. Powered by curiosity.</p>
+
+  <!-- Deployment Status Panel -->
+  <div style="display:flex;justify-content:center;margin-top:2rem;">
+    <div style="width:480px;background:var(--surface);border:1px solid var(--border);border-radius:4px;overflow:hidden;text-align:left;">
+
+      <!-- Title bar -->
+      <div style="background:var(--surface2);padding:0.55rem 1rem;display:flex;align-items:center;gap:0.45rem;border-bottom:1px solid var(--border);">
+        <span style="width:10px;height:10px;border-radius:50%;background:#ff5f57;display:inline-block;flex-shrink:0;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#ffbd2e;display:inline-block;flex-shrink:0;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#28c840;display:inline-block;flex-shrink:0;"></span>
+        <span style="flex:1;text-align:center;font-size:0.6rem;color:var(--muted);font-family:var(--font-mono);letter-spacing:0.5px;">cluster-status &#8212; live</span>
+      </div>
+
+      <!-- Status grid: icon | label | value | badge -->
+      <div style="padding:1.25rem 1.5rem;font-family:var(--font-mono);font-size:0.75rem;display:grid;grid-template-columns:1.4rem 9.5rem 1fr auto;row-gap:0.75rem;align-items:center;">
+
+        <span style="color:var(--green);">&#10004;</span>
+        <span style="color:var(--muted);letter-spacing:0.5px;">AUTO-SCALING</span>
+        <span style="color:var(--text);">enabled</span>
+        <span style="font-size:0.55rem;background:rgba(57,255,20,0.1);color:var(--green);border:1px solid rgba(57,255,20,0.3);padding:0.15rem 0.6rem;border-radius:2px;text-align:center;letter-spacing:1px;animation:pulseBadge 2s ease-in-out infinite;">ACTIVE</span>
+
+        <span style="color:var(--green);">&#10004;</span>
+        <span style="color:var(--muted);letter-spacing:0.5px;">SELF-HEALING</span>
+        <span style="color:var(--text);">pods active</span>
+        <span style="font-size:0.55rem;background:rgba(57,255,20,0.1);color:var(--green);border:1px solid rgba(57,255,20,0.3);padding:0.15rem 0.6rem;border-radius:2px;text-align:center;letter-spacing:1px;animation:pulseBadge 2s ease-in-out infinite 0.4s;">ACTIVE</span>
+
+        <span style="color:var(--cyan);">&#9679;</span>
+        <span style="color:var(--muted);letter-spacing:0.5px;">NODEPORT</span>
+        <span style="color:var(--text);">service exposed</span>
+        <span style="font-size:0.55rem;background:rgba(0,229,255,0.1);color:var(--cyan);border:1px solid rgba(0,229,255,0.3);padding:0.15rem 0.6rem;border-radius:2px;text-align:center;letter-spacing:1px;animation:pulseBadge 2s ease-in-out infinite 0.8s;">LIVE</span>
+
+      </div>
+
+      <!-- Student credit bar -->
+      <div style="background:var(--surface2);border-top:1px solid var(--border);padding:0.65rem 1.5rem;display:flex;align-items:center;justify-content:space-between;font-family:var(--font-mono);font-size:0.65rem;gap:1rem;">
+        <span style="color:var(--muted);white-space:nowrap;">student@devops:~$</span>
+        <span style="color:var(--green);font-weight:700;white-space:nowrap;">Muhammed Shan S</span>
+        <span style="font-size:0.55rem;background:rgba(57,255,20,0.1);color:var(--green);border:1px solid var(--green-dim);padding:0.2rem 0.6rem;border-radius:2px;white-space:nowrap;letter-spacing:0.5px;">DevOps Final Submission</span>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="footer-text" style="margin-top:2rem;font-size:0.6rem;color:var(--border);">Built for beginners. Powered by curiosity.</p>
 </footer>
+
+<style>
+  @keyframes pulseBadge {
+    0%,100% { opacity:1; }
+    50%      { opacity:0.4; }
+  }
+</style>
 
 <script>
   // Cursor

@@ -19,7 +19,7 @@ spec:
     spec:
       containers:
         - name: nginx
-          image: nginx-app
+          image: nginx-app:v2
           imagePullPolicy: Never
 
           ports:
